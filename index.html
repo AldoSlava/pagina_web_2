@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notas del Día</title>
+    <title>Notas del Día (Firebase)</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -55,13 +60,23 @@
 <body>
 
 <div class="container">
-    <h1>Mis Notas del Día</h1>
-    <textarea id="notaInput" placeholder="Hola Jonatahn escribe tu nota aquí..."></textarea>
+    <h1>Mis Notas del Día (Firebase)</h1>
+    <textarea id="notaInput" placeholder="Escribe tu nota aquí..."></textarea>
     <button onclick="guardarNota()">Guardar Nota</button>
     <div id="listaNotas"></div>
 </div>
 
 <script>
+    // 🔥 Configuración Firebase
+    const firebaseConfig = {
+        databaseURL: "https://paginaweb2-d9d4d-default-rtdb.firebaseio.com/"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const notasRef = db.ref("notas");
+
+    // Guardar nota
     function guardarNota() {
         const input = document.getElementById('notaInput');
         const nota = input.value.trim();
@@ -71,36 +86,38 @@
             return;
         }
 
-        let notas = JSON.parse(localStorage.getItem('notas')) || [];
-        notas.push({ texto: nota, fecha: new Date().toLocaleString() });
-        localStorage.setItem('notas', JSON.stringify(notas));
+        notasRef.push({
+            texto: nota,
+            fecha: new Date().toLocaleString()
+        });
 
         input.value = '';
-        mostrarNotas();
     }
 
-    function mostrarNotas() {
+    // Mostrar notas en tiempo real
+    notasRef.on('value', (snapshot) => {
         const lista = document.getElementById('listaNotas');
         lista.innerHTML = '';
 
-        let notas = JSON.parse(localStorage.getItem('notas')) || [];
+        snapshot.forEach((child) => {
+            const data = child.val();
+            const key = child.key;
 
-        notas.forEach((n, index) => {
             const div = document.createElement('div');
             div.className = 'nota';
-            div.innerHTML = `<strong>${n.fecha}</strong><br>${n.texto}<br><button onclick="eliminarNota(${index})">Eliminar</button>`;
+            div.innerHTML = `
+                <strong>${data.fecha}</strong><br>
+                ${data.texto}<br>
+                <button onclick="eliminarNota('${key}')">Eliminar</button>
+            `;
             lista.appendChild(div);
         });
-    }
+    });
 
-    function eliminarNota(index) {
-        let notas = JSON.parse(localStorage.getItem('notas')) || [];
-        notas.splice(index, 1);
-        localStorage.setItem('notas', JSON.stringify(notas));
-        mostrarNotas();
+    // Eliminar nota
+    function eliminarNota(key) {
+        notasRef.child(key).remove();
     }
-
-    window.onload = mostrarNotas;
 </script>
 
 </body>
